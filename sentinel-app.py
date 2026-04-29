@@ -189,7 +189,7 @@ if "loaded" not in st.session_state:
     try:
         df = add_timestamps(fetch_timeline())
         n_anom = int(df["is_anomaly"].sum())
-        msg(f"RECEIVED {int(len(df)):,} OBSERVATIONS // {n_anom:,} ANOMALIES DETECTED", "g")
+        msg(f"RECEIVED {int(len(df)):,} OBSERVATIONS // {int(n_anom):,} ANOMALIES DETECTED", "g")
     except Exception as e:
         msg(f"TIMELINE FAILED: {e}", "r")
         st.stop()
@@ -213,11 +213,12 @@ if "loaded" not in st.session_state:
 
 df = add_timestamps(fetch_timeline())
 
-total      = int(len(df))
-anomalies  = int(df["is_anomaly"].sum())
-normal     = int(total - anomalies)
-rate       = float((anomalies / total * 100) if total else 0)
-n_clusters = int((df["is_anomaly"].diff().fillna(0) == 1).sum())
+# .item() guarantees a plain Python scalar from any numpy type
+total      = len(df)
+anomalies  = df["is_anomaly"].sum().item()
+normal     = total - anomalies
+rate       = round(anomalies / total * 100, 2) if total else 0.0
+n_clusters = (df["is_anomaly"].diff().fillna(0) == 1).sum().item()
 c_lengths  = cluster_lengths(df["is_anomaly"])
 bands      = find_bands(df)
 min_dt     = MISSION_START
@@ -242,10 +243,10 @@ tab_overview, tab_channels, tab_model, tab_log = st.tabs(
 
 with tab_overview:
     c1, c2, c3, c4 = st.columns(4)
-    c1.metric("TOTAL OBSERVATIONS", f"{total:,}")
-    c2.metric("ANOMALIES DETECTED", f"{anomalies:,}", delta=f"{rate:.2f}%", delta_color="inverse")
-    c3.metric("NOMINAL", f"{normal:,}")
-    c4.metric("CLUSTERS", f"{n_clusters:,}")
+    c1.metric("TOTAL OBSERVATIONS", f"{int(total):,}")
+    c2.metric("ANOMALIES DETECTED", f"{int(anomalies):,}", delta=f"{rate:.2f}%", delta_color="inverse")
+    c3.metric("NOMINAL", f"{int(normal):,}")
+    c4.metric("CLUSTERS", f"{int(n_clusters):,}")
 
     if anomalies > 0:
         st.divider()
@@ -255,7 +256,7 @@ with tab_overview:
         bar = go.Figure(go.Bar(x=daily["timestamp"], y=daily["count"], marker_color=RED, opacity=0.7))
         bar.update_layout(**retro_layout(200, margin=dict(l=40, r=20, t=10, b=30),
             xaxis=dict(title="DATE"), yaxis=dict(title="ANOMALIES / DAY")))
-        st.plotly_chart(bar, use_container_width=True)
+        st.plotly_chart(bar, width="stretch")
 
         st.divider()
         st.markdown("#### ANOMALY CLUSTERS")
@@ -266,7 +267,7 @@ with tab_overview:
             dur = f"{sec//3600}h {(sec%3600)//60}m" if sec >= 3600 else f"{sec//60}m {sec%60}s" if sec >= 60 else f"{sec}s"
             cluster_rows.append({"CLUSTER": i+1, "START": s.strftime("%Y-%m-%d %H:%M"),
                 "END": e.strftime("%Y-%m-%d %H:%M"), "DURATION": dur, "POINTS": length})
-        st.dataframe(pd.DataFrame(cluster_rows), use_container_width=True, hide_index=True)
+        st.dataframe(pd.DataFrame(cluster_rows), width="stretch", hide_index=True)
 
 # ── CHANNEL EXPLORER ─────────────────────────────────────────────────────────
 
@@ -292,7 +293,7 @@ with tab_channels:
     id_start = dt_to_id(datetime.combine(from_date, datetime.min.time()))
     id_end   = min(dt_to_id(datetime.combine(to_date, datetime.max.time())), total - 1)
 
-    st.caption(f"ID {id_start:,} — {id_end:,} // {id_end - id_start + 1:,} POINTS")
+    st.caption(f"ID {int(id_start):,} — {int(id_end):,} // {int(id_end - id_start + 1):,} POINTS")
     go_btn = st.button("FETCH", type="primary")
 
     if go_btn and selected:
@@ -329,14 +330,14 @@ with tab_channels:
 
             ch_fig.update_layout(**retro_layout(420, margin=dict(l=50, r=20, t=30, b=40),
                 xaxis=dict(title="DATE"), yaxis=dict(title="SIGNAL")))
-            st.plotly_chart(ch_fig, use_container_width=True)
+            st.plotly_chart(ch_fig, width="stretch")
 
             with st.expander("CHANNEL STATISTICS"):
                 rows = [{"CHANNEL": n, "MEAN": round(d["value"].mean(), 4),
                          "STD": round(d["value"].std(), 4),
                          "MIN": round(d["value"].min(), 4), "MAX": round(d["value"].max(), 4),
                          "ANOMALIES": int(d["is_anomaly"].sum())} for n, d in ch_data.items()]
-                st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+                st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
 
     elif go_btn:
         st.warning("SELECT AT LEAST ONE CHANNEL")
@@ -379,7 +380,7 @@ with tab_model:
                            annotation_text=f"THR={thr:.4f}", annotation_font_color=RED)
             sfig.update_layout(**retro_layout(300, margin=dict(l=50, r=20, t=10, b=40),
                 xaxis=dict(title="DATE"), yaxis=dict(title="SCORE")))
-            st.plotly_chart(sfig, use_container_width=True)
+            st.plotly_chart(sfig, width="stretch")
 
             st.markdown("##### SCORE DISTRIBUTION")
             hfig = go.Figure(go.Histogram(x=s, nbinsx=100, marker_color=AMBER, opacity=0.75))
@@ -387,7 +388,7 @@ with tab_model:
                            annotation_text="THRESHOLD", annotation_font_color=RED)
             hfig.update_layout(**retro_layout(250, margin=dict(l=40, r=20, t=10, b=30),
                 xaxis=dict(title="RECONSTRUCTION ERROR"), yaxis=dict(title="FREQUENCY", type="log")))
-            st.plotly_chart(hfig, use_container_width=True)
+            st.plotly_chart(hfig, width="stretch")
 
         per_ch = report.get("per_channel_mse")
         if per_ch and isinstance(per_ch, list):
@@ -403,7 +404,7 @@ with tab_model:
             mfig.update_layout(**retro_layout(max(300, len(mse_df) * 22),
                 margin=dict(l=130, r=20, t=10, b=30),
                 xaxis=dict(title="MSE"), yaxis=dict(autorange="reversed")))
-            st.plotly_chart(mfig, use_container_width=True)
+            st.plotly_chart(mfig, width="stretch")
 
         topk = report.get("window_top_channels")
         if topk and isinstance(topk, list) and features_list:
@@ -413,14 +414,14 @@ with tab_model:
                     for window in topk for i in window]
             freq_df = pd.Series(flat).value_counts().reset_index()
             freq_df.columns = ["CHANNEL", "APPEARANCES"]
-            st.dataframe(freq_df.head(20), use_container_width=True, hide_index=True)
+            st.dataframe(freq_df.head(20), width="stretch", hide_index=True)
 
         if features_list:
             with st.expander("FEATURE LIST"):
                 st.code(", ".join(features_list))
 
         with st.expander("RAW /REPORT"):
-            st.json({k: (f"[{len(v):,} values]" if isinstance(v, list) and len(v) > 20 else v)
+            st.json({k: (f"[{int(len(v)):,} values]" if isinstance(v, list) and len(v) > 20 else v)
                      for k, v in report.items()})
     else:
         st.warning("REPORT ENDPOINT UNAVAILABLE")
@@ -428,14 +429,14 @@ with tab_model:
     st.divider()
     st.markdown("##### PREDICTION SUMMARY")
     mc1, mc2, mc3, mc4 = st.columns(4)
-    mc1.metric("TOTAL", f"{total:,}")
-    mc2.metric("ANOMALOUS", f"{anomalies:,}")
-    mc3.metric("NOMINAL", f"{normal:,}")
+    mc1.metric("TOTAL", f"{int(total):,}")
+    mc2.metric("ANOMALOUS", f"{int(anomalies):,}")
+    mc3.metric("NOMINAL", f"{int(normal):,}")
     mc4.metric("RATE", f"{rate:.2f}%")
 
     if n_clusters > 0:
         mc5, mc6, mc7, mc8 = st.columns(4)
-        mc5.metric("CLUSTERS", f"{n_clusters:,}")
+        mc5.metric("CLUSTERS", f"{int(n_clusters):,}")
         mc6.metric("AVG LENGTH", f"{np.mean(c_lengths):.1f}")
         mc7.metric("MAX LENGTH", f"{int(max(c_lengths)):,}")
         mc8.metric("MIN LENGTH", f"{int(min(c_lengths)):,}")
@@ -451,7 +452,7 @@ with tab_model:
             bucketed = df[df["is_anomaly"] == 1].set_index("timestamp").resample(freq).size().reset_index(name="count")
             dfig = go.Figure(go.Bar(x=bucketed["timestamp"], y=bucketed["count"], marker_color=RED, opacity=0.75))
             dfig.update_layout(**retro_layout(280, margin=dict(l=40, r=20, t=10, b=30), yaxis=dict(title=f"PER {bucket}")))
-            st.plotly_chart(dfig, use_container_width=True)
+            st.plotly_chart(dfig, width="stretch")
 
         with col_r:
             cum = df["is_anomaly"].cumsum()
@@ -459,14 +460,14 @@ with tab_model:
                 mode="lines", line=dict(color=RED, width=1.5),
                 fill="tozeroy", fillcolor="rgba(255,51,51,0.04)"))
             cfig.update_layout(**retro_layout(280, margin=dict(l=40, r=20, t=10, b=30), yaxis=dict(title="CUMULATIVE")))
-            st.plotly_chart(cfig, use_container_width=True)
+            st.plotly_chart(cfig, width="stretch")
 
         if n_clusters > 0:
             st.markdown("##### CLUSTER LENGTHS")
             clfig = go.Figure(go.Histogram(x=c_lengths, nbinsx=min(30, max(c_lengths)), marker_color=CYAN, opacity=0.75))
             clfig.update_layout(**retro_layout(250, margin=dict(l=40, r=20, t=10, b=30),
                 xaxis=dict(title="LENGTH (POINTS)"), yaxis=dict(title="FREQUENCY")))
-            st.plotly_chart(clfig, use_container_width=True)
+            st.plotly_chart(clfig, width="stretch")
     else:
         st.warning("NO ANOMALIES DETECTED")
 
@@ -479,14 +480,14 @@ with tab_log:
         view = st.radio("FILTER", ["ALL", "ANOMALIES", "NOMINAL"], horizontal=True, label_visibility="collapsed")
 
     filt = df if view == "ALL" else df[df["is_anomaly"] == (1 if view == "ANOMALIES" else 0)]
-    col_n.caption(f"{len(filt):,} RECORDS")
+    col_n.caption(f"{int(len(filt)):,} RECORDS")
 
     display = filt[["id", "timestamp", "is_anomaly"]].copy()
     display["CLASS"]  = display["is_anomaly"].map({1: "ANOMALY", 0: "NOMINAL"})
     display["STATUS"] = display["is_anomaly"].map({1: "DETECTED", 0: "NOMINAL"})
     st.dataframe(display[["id", "timestamp", "CLASS", "STATUS"]].rename(
         columns={"id": "ID", "timestamp": "TIMESTAMP"}),
-        use_container_width=True, height=500, hide_index=True)
+        width="stretch", height=500, hide_index=True)
 
 st.divider()
 st.caption("SENTINEL V1.0.0 // ESA SPACECRAFT TELEMETRY ANOMALY DETECTION // PCA RESIDUAL MODEL")
