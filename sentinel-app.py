@@ -188,8 +188,8 @@ if "loaded" not in st.session_state:
     msg("LOADING TIMELINE DATA...")
     try:
         df = add_timestamps(fetch_timeline())
-        n_anom = int(df["is_anomaly"].sum())
-        msg(f"RECEIVED {int(len(df)):,} OBSERVATIONS // {int(n_anom):,} ANOMALIES DETECTED", "g")
+        n_anom = df["is_anomaly"].tolist().count(1)
+        msg(f"RECEIVED {len(df):,} OBSERVATIONS // {n_anom:,} ANOMALIES DETECTED", "g")
     except Exception as e:
         msg(f"TIMELINE FAILED: {e}", "r")
         st.stop()
@@ -213,12 +213,13 @@ if "loaded" not in st.session_state:
 
 df = add_timestamps(fetch_timeline())
 
-# .item() guarantees a plain Python scalar from any numpy type
-total      = len(df)
-anomalies  = df["is_anomaly"].sum().item()
+# Pure Python — numpy int/format is broken on Python 3.14
+_labels    = df["is_anomaly"].tolist()
+total      = len(_labels)
+anomalies  = _labels.count(1)
 normal     = total - anomalies
 rate       = round(anomalies / total * 100, 2) if total else 0.0
-n_clusters = (df["is_anomaly"].diff().fillna(0) == 1).sum().item()
+n_clusters = sum(1 for i in range(1, total) if _labels[i] == 1 and _labels[i-1] == 0)
 c_lengths  = cluster_lengths(df["is_anomaly"])
 bands      = find_bands(df)
 min_dt     = MISSION_START
