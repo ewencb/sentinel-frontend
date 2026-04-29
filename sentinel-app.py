@@ -11,6 +11,19 @@ import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
+def _fmt(n):
+    """Format number with commas — avoids numpy format bugs."""
+    s = str(int(n) if hasattr(n, '__int__') else n)
+    # Add commas manually
+    if s.startswith('-'):
+        return '-' + _fmt(s[1:])
+    parts = []
+    while len(s) > 3:
+        parts.append(s[-3:])
+        s = s[:-3]
+    parts.append(s)
+    return ','.join(reversed(parts))
+
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  CONFIG
@@ -189,7 +202,7 @@ if "loaded" not in st.session_state:
     try:
         df = add_timestamps(fetch_timeline())
         n_anom = df["is_anomaly"].tolist().count(1)
-        msg(f"RECEIVED {len(df):,} OBSERVATIONS // {n_anom:,} ANOMALIES DETECTED", "g")
+        msg(f"RECEIVED {_fmt(len(df))} OBSERVATIONS // {_fmt(n_anom)} ANOMALIES DETECTED", "g")
     except Exception as e:
         msg(f"TIMELINE FAILED: {e}", "r")
         st.stop()
@@ -220,10 +233,6 @@ anomalies  = _labels.count(1)
 normal     = total - anomalies
 rate       = round(anomalies / total * 100, 2) if total else 0.0
 n_clusters = sum(1 for i in range(1, total) if _labels[i] == 1 and _labels[i-1] == 0)
-
-# DEBUG — remove once deployed
-import sys
-print(f"DEBUG types: total={type(total).__name__}({total}), anomalies={type(anomalies).__name__}({anomalies}), normal={type(normal).__name__}({normal})", file=sys.stderr)
 c_lengths  = cluster_lengths(df["is_anomaly"])
 bands      = find_bands(df)
 min_dt     = MISSION_START
@@ -248,10 +257,10 @@ tab_overview, tab_channels, tab_model, tab_log = st.tabs(
 
 with tab_overview:
     c1, c2, c3, c4 = st.columns(4)
-    c1.metric("TOTAL OBSERVATIONS", f"{int(total):,}")
-    c2.metric("ANOMALIES DETECTED", f"{int(anomalies):,}", delta=f"{rate:.2f}%", delta_color="inverse")
-    c3.metric("NOMINAL", f"{int(normal):,}")
-    c4.metric("CLUSTERS", f"{int(n_clusters):,}")
+    c1.metric("TOTAL OBSERVATIONS", _fmt(total))
+    c2.metric("ANOMALIES DETECTED", _fmt(anomalies), delta=f"{rate:.2f}%", delta_color="inverse")
+    c3.metric("NOMINAL", _fmt(normal))
+    c4.metric("CLUSTERS", _fmt(n_clusters))
 
     if anomalies > 0:
         st.divider()
@@ -298,7 +307,7 @@ with tab_channels:
     id_start = dt_to_id(datetime.combine(from_date, datetime.min.time()))
     id_end   = min(dt_to_id(datetime.combine(to_date, datetime.max.time())), total - 1)
 
-    st.caption(f"ID {int(id_start):,} — {int(id_end):,} // {int(id_end - id_start + 1):,} POINTS")
+    st.caption(f"ID {_fmt(id_start)} — {_fmt(id_end)} // {_fmt(id_end - id_start + 1)} POINTS")
     go_btn = st.button("FETCH", type="primary")
 
     if go_btn and selected:
@@ -357,7 +366,7 @@ with tab_model:
         features_list = report.get("features", [])
         mr1, mr2, mr3, mr4 = st.columns(4)
         if "threshold" in report:  mr1.metric("THRESHOLD", f"{report['threshold']:.6f}")
-        if "n_anomalies" in report: mr2.metric("ANOMALIES", f"{int(report['n_anomalies']):,}")
+        if "n_anomalies" in report: mr2.metric("ANOMALIES", _fmt(report['n_anomalies']))
         if features_list:           mr3.metric("FEATURES", f"{len(features_list)}")
         mr4.metric("WINDOW", "100 ROWS")
 
@@ -426,7 +435,7 @@ with tab_model:
                 st.code(", ".join(features_list))
 
         with st.expander("RAW /REPORT"):
-            st.json({k: (f"[{int(len(v)):,} values]" if isinstance(v, list) and len(v) > 20 else v)
+            st.json({k: (f"[{_fmt(len(v))} values]" if isinstance(v, list) and len(v) > 20 else v)
                      for k, v in report.items()})
     else:
         st.warning("REPORT ENDPOINT UNAVAILABLE")
@@ -434,17 +443,17 @@ with tab_model:
     st.divider()
     st.markdown("##### PREDICTION SUMMARY")
     mc1, mc2, mc3, mc4 = st.columns(4)
-    mc1.metric("TOTAL", f"{int(total):,}")
-    mc2.metric("ANOMALOUS", f"{int(anomalies):,}")
-    mc3.metric("NOMINAL", f"{int(normal):,}")
+    mc1.metric("TOTAL", _fmt(total))
+    mc2.metric("ANOMALOUS", _fmt(anomalies))
+    mc3.metric("NOMINAL", _fmt(normal))
     mc4.metric("RATE", f"{rate:.2f}%")
 
     if n_clusters > 0:
         mc5, mc6, mc7, mc8 = st.columns(4)
-        mc5.metric("CLUSTERS", f"{int(n_clusters):,}")
+        mc5.metric("CLUSTERS", _fmt(n_clusters))
         mc6.metric("AVG LENGTH", f"{np.mean(c_lengths):.1f}")
-        mc7.metric("MAX LENGTH", f"{int(max(c_lengths)):,}")
-        mc8.metric("MIN LENGTH", f"{int(min(c_lengths)):,}")
+        mc7.metric("MAX LENGTH", _fmt(max(c_lengths)))
+        mc8.metric("MIN LENGTH", _fmt(min(c_lengths)))
 
     st.divider()
     st.markdown("##### ANOMALY DISTRIBUTION")
@@ -485,7 +494,7 @@ with tab_log:
         view = st.radio("FILTER", ["ALL", "ANOMALIES", "NOMINAL"], horizontal=True, label_visibility="collapsed")
 
     filt = df if view == "ALL" else df[df["is_anomaly"] == (1 if view == "ANOMALIES" else 0)]
-    col_n.caption(f"{int(len(filt)):,} RECORDS")
+    col_n.caption(f"{_fmt(len(filt))} RECORDS")
 
     display = filt[["id", "timestamp", "is_anomaly"]].copy()
     display["CLASS"]  = display["is_anomaly"].map({1: "ANOMALY", 0: "NOMINAL"})
