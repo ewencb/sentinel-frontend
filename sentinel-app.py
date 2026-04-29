@@ -12,17 +12,23 @@ import numpy as np
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
 def _fmt(n):
-    """Format number with commas — avoids numpy format bugs."""
-    s = str(int(n) if hasattr(n, '__int__') else n)
-    # Add commas manually
-    if s.startswith('-'):
-        return '-' + _fmt(s[1:])
+    """Format number with commas using pure string ops."""
+    s = str(n)
+    if '.' in s:
+        whole, dec = s.split('.', 1)
+    else:
+        whole, dec = s, None
+    neg = whole.startswith('-')
+    if neg: whole = whole[1:]
     parts = []
-    while len(s) > 3:
-        parts.append(s[-3:])
-        s = s[:-3]
-    parts.append(s)
-    return ','.join(reversed(parts))
+    while len(whole) > 3:
+        parts.append(whole[-3:])
+        whole = whole[:-3]
+    parts.append(whole)
+    result = ','.join(reversed(parts))
+    if neg: result = '-' + result
+    if dec: result = result + '.' + dec
+    return result
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
