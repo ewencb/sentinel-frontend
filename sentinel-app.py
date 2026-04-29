@@ -189,7 +189,7 @@ if "loaded" not in st.session_state:
     try:
         df = add_timestamps(fetch_timeline())
         n_anom = int(df["is_anomaly"].sum())
-        msg(f"RECEIVED {len(df):,} OBSERVATIONS // {n_anom:,} ANOMALIES DETECTED", "g")
+        msg(f"RECEIVED {int(len(df)):,} OBSERVATIONS // {n_anom:,} ANOMALIES DETECTED", "g")
     except Exception as e:
         msg(f"TIMELINE FAILED: {e}", "r")
         st.stop()
@@ -213,10 +213,10 @@ if "loaded" not in st.session_state:
 
 df = add_timestamps(fetch_timeline())
 
-total      = len(df)
+total      = int(len(df))
 anomalies  = int(df["is_anomaly"].sum())
-normal     = total - anomalies
-rate       = (anomalies / total * 100) if total else 0
+normal     = int(total - anomalies)
+rate       = float((anomalies / total * 100) if total else 0)
 n_clusters = int((df["is_anomaly"].diff().fillna(0) == 1).sum())
 c_lengths  = cluster_lengths(df["is_anomaly"])
 bands      = find_bands(df)
@@ -351,7 +351,7 @@ with tab_model:
         features_list = report.get("features", [])
         mr1, mr2, mr3, mr4 = st.columns(4)
         if "threshold" in report:  mr1.metric("THRESHOLD", f"{report['threshold']:.6f}")
-        if "n_anomalies" in report: mr2.metric("ANOMALIES", f"{report['n_anomalies']:,}")
+        if "n_anomalies" in report: mr2.metric("ANOMALIES", f"{int(report['n_anomalies']):,}")
         if features_list:           mr3.metric("FEATURES", f"{len(features_list)}")
         mr4.metric("WINDOW", "100 ROWS")
 
@@ -437,8 +437,8 @@ with tab_model:
         mc5, mc6, mc7, mc8 = st.columns(4)
         mc5.metric("CLUSTERS", f"{n_clusters:,}")
         mc6.metric("AVG LENGTH", f"{np.mean(c_lengths):.1f}")
-        mc7.metric("MAX LENGTH", f"{max(c_lengths):,}")
-        mc8.metric("MIN LENGTH", f"{min(c_lengths):,}")
+        mc7.metric("MAX LENGTH", f"{int(max(c_lengths)):,}")
+        mc8.metric("MIN LENGTH", f"{int(min(c_lengths)):,}")
 
     st.divider()
     st.markdown("##### ANOMALY DISTRIBUTION")
