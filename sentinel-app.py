@@ -256,7 +256,7 @@ api_ok = fetch_health().get("status") == "ok"
 col_s.markdown(f'<div class="status-{"ok" if api_ok else "fail"}">{"SYS NOMINAL" if api_ok else "LINK DOWN"}</div>', unsafe_allow_html=True)
 
 tab_overview, tab_channels, tab_model, tab_log = st.tabs(
-    ["OVERVIEW", "CHANNEL EXPLORER", "MODEL REPORT", "OBSERVATION LOG"]
+    ["OVERVIEW", "CHANNEL_EXPLORER", "MODEL_REPORT", "OBSERVATION_LOG"]
 )
 
 # ── OVERVIEW ─────────────────────────────────────────────────────────────────
@@ -289,10 +289,10 @@ with tab_overview:
                 "END": e.strftime("%Y-%m-%d %H:%M"), "DURATION": dur, "POINTS": length})
         st.dataframe(pd.DataFrame(cluster_rows), width="stretch", hide_index=True)
 
-# ── CHANNEL EXPLORER ─────────────────────────────────────────────────────────
+# ── CHANNEL_EXPLORER ─────────────────────────────────────────────────────────
 
 with tab_channels:
-    st.markdown("#### CHANNEL EXPLORER")
+    st.markdown("#### CHANNEL_EXPLORER")
     st.caption("SIGNAL TURNS RED DURING ANOMALY DETECTIONS")
 
     known = fetch_features()
@@ -362,10 +362,10 @@ with tab_channels:
     elif go_btn:
         st.warning("SELECT AT LEAST ONE CHANNEL")
 
-# ── MODEL REPORT ─────────────────────────────────────────────────────────────
+# ── MODEL_REPORT ─────────────────────────────────────────────────────────────
 
 with tab_model:
-    st.markdown("#### MODEL REPORT")
+    st.markdown("#### MODEL_REPORT")
     report = fetch_report()
 
     if report:
@@ -491,10 +491,10 @@ with tab_model:
     else:
         st.warning("NO ANOMALIES DETECTED")
 
-# ── OBSERVATION LOG ──────────────────────────────────────────────────────────
+# ── OBSERVATION_LOG ──────────────────────────────────────────────────────────
 
 with tab_log:
-    st.markdown("#### OBSERVATION LOG")
+    st.markdown("#### OBSERVATION_LOG")
     col_f, col_n = st.columns([3, 1])
     with col_f:
         view = st.radio("FILTER", ["ALL", "ANOMALIES", "NOMINAL"], horizontal=True, label_visibility="collapsed")
