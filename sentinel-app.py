@@ -220,6 +220,10 @@ anomalies  = _labels.count(1)
 normal     = total - anomalies
 rate       = round(anomalies / total * 100, 2) if total else 0.0
 n_clusters = sum(1 for i in range(1, total) if _labels[i] == 1 and _labels[i-1] == 0)
+
+# DEBUG — remove once deployed
+import sys
+print(f"DEBUG types: total={type(total).__name__}({total}), anomalies={type(anomalies).__name__}({anomalies}), normal={type(normal).__name__}({normal})", file=sys.stderr)
 c_lengths  = cluster_lengths(df["is_anomaly"])
 bands      = find_bands(df)
 min_dt     = MISSION_START
