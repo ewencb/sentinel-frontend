@@ -113,7 +113,7 @@ def retro_layout(height=300, margin=None, **kw) -> dict:
 #  CSS
 # ═══════════════════════════════════════════════════════════════════════════════
 
-st.set_page_config(page_title="SENTINEL", page_icon="S", layout="wide")
+st.set_page_config(page_title="SENTINEL", page_icon="🛰️", layout="wide")
 
 st.markdown(f"""
 <style>
