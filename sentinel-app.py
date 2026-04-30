@@ -308,15 +308,16 @@ with tab_channels:
     col_ch, col_from, col_to = st.columns([3, 1.5, 1.5])
     with col_ch:
         if known:
-            selected = st.multiselect("CHANNELS", known, default=known[:1])
+            default_ch = ["channel_41"] if "channel_41" in known else known[:1]
+            selected = st.multiselect("CHANNELS", known, default=default_ch)
         else:
             raw = st.text_input("CHANNELS", placeholder="channel_41, channel_42")
             selected = [c.strip() for c in raw.split(",") if c.strip()] if raw else []
 
     with col_from:
-        from_date = st.date_input("FROM", value=min_dt.date(), min_value=min_dt.date(), max_value=max_dt.date())
+        from_date = st.date_input("FROM", value=datetime(2007, 3, 16).date(), min_value=min_dt.date(), max_value=max_dt.date())
     with col_to:
-        to_date = st.date_input("TO", value=min(min_dt + timedelta(days=7), max_dt).date(),
+        to_date = st.date_input("TO", value=datetime(2007, 3, 17).date(),
                                 min_value=min_dt.date(), max_value=max_dt.date())
 
     id_start = dt_to_id(datetime.combine(from_date, datetime.min.time()))
