@@ -145,10 +145,19 @@ div[data-testid="stMetric"] [data-testid="stMetricValue"] {{ font-family: {MONO}
 #  API
 # ═══════════════════════════════════════════════════════════════════════════════
 
-@st.cache_data(ttl=300)
+@st.cache_data(ttl=60)
 def fetch_health() -> dict:
-    try: return requests.get(f"{API_BASE}/", timeout=5).json()
-    except Exception: return {}
+    """Health check with retries — Cloud Run cold starts can take 30-60s."""
+    for attempt in range(5):
+        try:
+            result = requests.get(f"{API_BASE}/", timeout=30).json()
+            if result.get("status") == "ok":
+                return result
+        except Exception:
+            pass
+        if attempt < 4:
+            time.sleep(3)
+    return {}
 
 @st.cache_data(ttl=300)
 def fetch_timeline() -> pd.DataFrame:
@@ -195,13 +204,13 @@ if "loaded" not in st.session_state:
         time.sleep(0.15)
 
     msg("SENTINEL V1.0.0 // PCA RESIDUAL MODEL")
-    msg(f"CONNECTING TO {API_BASE}")
+    msg(f"CONNECTING TO API (COLD START MAY TAKE ~30S)...")
 
     health = fetch_health()
     if health.get("status") == "ok":
         msg("UPLINK ESTABLISHED", "g")
     else:
-        msg("UPLINK FAILED", "r")
+        msg("UPLINK FAILED — API MAY BE STARTING UP, REFRESH IN 30S", "r")
         st.stop()
 
     msg("LOADING TIMELINE DATA...")
