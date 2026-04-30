@@ -256,7 +256,7 @@ api_ok = fetch_health().get("status") == "ok"
 col_s.markdown(f'<div class="status-{"ok" if api_ok else "fail"}">{"SYS NOMINAL" if api_ok else "LINK DOWN"}</div>', unsafe_allow_html=True)
 
 tab_overview, tab_channels, tab_model, tab_log = st.tabs(
-    ["OVERVIEW", "CHANNEL_EXPLORER", "MODEL_REPORT", "OBSERVATION_LOG"]
+    ["OVERVIEW", "CHANNEL EXPLORER", "MODEL REPORT", "OBSERVATION LOG"]
 )
 
 # ── OVERVIEW ─────────────────────────────────────────────────────────────────
@@ -289,10 +289,10 @@ with tab_overview:
                 "END": e.strftime("%Y-%m-%d %H:%M"), "DURATION": dur, "POINTS": length})
         st.dataframe(pd.DataFrame(cluster_rows), width="stretch", hide_index=True)
 
-# ── CHANNEL_EXPLORER ─────────────────────────────────────────────────────────
+# ── CHANNEL EXPLORER ─────────────────────────────────────────────────────────
 
 with tab_channels:
-    st.markdown("#### CHANNEL_EXPLORER")
+    st.markdown("#### CHANNEL EXPLORER")
     st.caption("SIGNAL TURNS RED DURING ANOMALY DETECTIONS")
 
     known = fetch_features()
@@ -362,10 +362,10 @@ with tab_channels:
     elif go_btn:
         st.warning("SELECT AT LEAST ONE CHANNEL")
 
-# ── MODEL_REPORT ─────────────────────────────────────────────────────────────
+# ── MODEL REPORT ─────────────────────────────────────────────────────────────
 
 with tab_model:
-    st.markdown("#### MODEL_REPORT")
+    st.markdown("#### MODEL REPORT")
     report = fetch_report()
 
     if report:
@@ -419,22 +419,14 @@ with tab_model:
             else:
                 mse_df = pd.DataFrame({"CHANNEL": features_list[:len(per_ch)], "MSE": per_ch})
             mse_df = mse_df.sort_values("MSE", ascending=False)
-            mfig = go.Figure(go.Bar(x=mse_df["MSE"], y=mse_df["CHANNEL"],
-                orientation="h", marker_color=AMBER, opacity=0.8))
-            mfig.update_layout(**retro_layout(max(300, len(mse_df) * 22),
-                margin=dict(l=130, r=20, t=10, b=30),
-                xaxis=dict(title="MSE"), yaxis=dict(autorange="reversed")))
-            st.plotly_chart(mfig, width="stretch")
 
-        topk = report.get("window_top_channels")
-        if topk and isinstance(topk, list) and features_list:
-            st.divider()
-            st.markdown("##### TOP CONTRIBUTING CHANNELS")
-            flat = [features_list[i] if i < len(features_list) else f"idx_{i}"
-                    for window in topk for i in window]
-            freq_df = pd.Series(flat).value_counts().reset_index()
-            freq_df.columns = ["CHANNEL", "APPEARANCES"]
-            st.dataframe(freq_df.head(20), width="stretch", hide_index=True)
+            with st.container(height=400):
+                mfig = go.Figure(go.Bar(x=mse_df["MSE"], y=mse_df["CHANNEL"],
+                    orientation="h", marker_color=AMBER, opacity=0.8))
+                mfig.update_layout(**retro_layout(max(400, len(mse_df) * 24),
+                    margin=dict(l=130, r=20, t=10, b=30),
+                    xaxis=dict(title="MSE"), yaxis=dict(autorange="reversed")))
+                st.plotly_chart(mfig, width="stretch")
 
         if features_list:
             with st.expander("FEATURE LIST"):
@@ -491,10 +483,10 @@ with tab_model:
     else:
         st.warning("NO ANOMALIES DETECTED")
 
-# ── OBSERVATION_LOG ──────────────────────────────────────────────────────────
+# ── OBSERVATION LOG ──────────────────────────────────────────────────────────
 
 with tab_log:
-    st.markdown("#### OBSERVATION_LOG")
+    st.markdown("#### OBSERVATION LOG")
     col_f, col_n = st.columns([3, 1])
     with col_f:
         view = st.radio("FILTER", ["ALL", "ANOMALIES", "NOMINAL"], horizontal=True, label_visibility="collapsed")
